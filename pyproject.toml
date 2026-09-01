@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oilfield-ai"
+version = "0.1.0"
+description = "Well-event detection on the Petrobras 3W dataset and NPT tagging and daily summaries on Equinor Volve drilling reports"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Anupreet Singh" }]
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.1,<2.3",
+  "pyarrow>=14",
+  "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+spark = ["pyspark>=3.5,<3.6", "delta-spark>=3.2,<3.4"]
+dev = ["pytest>=8", "ruff>=0.5"]
+all = ["oilfield-ai[spark,dev]"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["spark: needs a local Spark session (Java 17)"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "B905"]

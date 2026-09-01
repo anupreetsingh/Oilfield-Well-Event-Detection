@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Data and model outputs (datasets are downloaded, never committed)
+data/
+models/
+mlruns/
+mlflow.db
+spark-warehouse/
+metastore_db/
+derby.log
+checkpoints/
+
+# Databricks
+.databricks/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
