@@ -7,6 +7,7 @@ simulated or hand-drawn runs numbered (``SIMULATED_00012``, ``DRAWN_00003``).
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -14,6 +15,9 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 PA_PER_BAR = 1e5
+# dataset.ini documents pressures in Pa, but the hand-drawn runs store bar. No producing well
+# reads under 10 000 Pa (0.1 bar), so a run whose median pressure is below that is already bar.
+ALREADY_BAR_BELOW = 1e4
 
 
 def parse_instance_name(path: str | Path) -> dict:
@@ -61,9 +65,14 @@ def read_instance(path: str | Path, sensors: dict[str, dict]) -> pd.DataFrame:
     out = pd.DataFrame({"ts": pd.to_datetime(df["timestamp"]).dt.tz_localize("UTC")})
     for name, spec in sensors.items():
         values = df[name].to_numpy(dtype="float64") if name in df else np.full(len(df), np.nan)
-        if spec["kind"] == "pressure":
+        if spec["kind"] == "pressure" and _median(values) >= ALREADY_BAR_BELOW:
             values = values / PA_PER_BAR
         out[spec["column"]] = values
     out["raw_class"] = df["class"].astype("float64").to_numpy() if "class" in df else np.nan
     return out.sort_values("ts", kind="stable").reset_index(drop=True)
 
+
+def _median(values: np.ndarray) -> float:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # all-NaN sensor
+        return float(np.nanmedian(np.abs(values)))

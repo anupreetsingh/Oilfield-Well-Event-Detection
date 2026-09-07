@@ -71,7 +71,7 @@ def _process_runs(batches: Iterator[pd.DataFrame], sensors: dict, cleaning: Clea
     for batch in batches:
         for run in batch.itertuples(index=False):
             raw = read_instance(run.path, sensors)
-            clean, quality = clean_instance(raw, sensors, cleaning)
+            clean, quality = clean_instance(raw, sensors, cleaning, run.source)
             readings = resample_instance(clean, columns, cleaning.resample_seconds)
 
             readings = readings.assign(kind="reading", instance_id=run.instance_id)
@@ -111,7 +111,7 @@ def build_silver(spark, store: TableStore, cfg: dict, event_types: list[int] | N
         )
         n_parts = max(1, min(cfg.get("spark", {}).get("partitions", 64), len(runs_k)))
         processed = (
-            meta.select("instance_id", "path")
+            meta.select("instance_id", "path", "source")
             .repartition(n_parts)
             .mapInPandas(partial(_process_runs, sensors=sensors, cleaning=cleaning), processed_schema(columns))
             .persist(StorageLevel.MEMORY_AND_DISK)

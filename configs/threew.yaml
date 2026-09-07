@@ -21,11 +21,13 @@ sensors:
 
 cleaning:
   # A pressure or temperature value repeated for this long is a stuck gauge, not a quiet well.
-  # Gas-lift rate is exempt: it legitimately sits at zero when lift is off.
+  # Gas-lift rate is exempt: it legitimately sits at zero when lift is off. Only real wells have
+  # gauges that can stick; hand-drawn runs are piecewise flat on purpose.
   frozen_min_seconds: 600
   frozen_kinds: [pressure, temperature]
+  frozen_sources: [WELL]
   min_sensor_coverage: 0.5   # a sensor must be valid for this share of a run, or it is dropped for the run
-  min_valid_sensors: 3       # runs with fewer usable sensors are dropped
+  min_valid_sensors: 2       # runs with fewer usable sensors are dropped (many v2 wells only carry TPT gauges)
   resample_seconds: 10
 
 windows:
@@ -33,7 +35,7 @@ windows:
   step_seconds: 60
   baseline_seconds: 1800     # trailing context before each window, used for drift features
   min_coverage: 0.5          # per-sensor share of valid 10 s buckets for a window feature to count
-  min_valid_sensors: 3
+  min_valid_sensors: 2
 
 spark:
   partitions: 64

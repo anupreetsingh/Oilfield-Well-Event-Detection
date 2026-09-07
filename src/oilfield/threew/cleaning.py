@@ -5,7 +5,8 @@ A run flows through three masks, in order, and every rejected value becomes NaN:
 1. out-of-range: values outside each sensor's physical limits (historian sentinels such as
    -9 999 000 Pa, overflowed floats, dead gauges reporting 0 bar);
 2. frozen: a pressure or temperature that repeats the exact same value for
-   ``frozen_min_seconds`` or longer, which a live gauge sampled at 1 Hz never does;
+   ``frozen_min_seconds`` or longer, which a live gauge sampled at 1 Hz never does (only for
+   real wells: simulated runs have no gauges, and hand-drawn runs are flat by construction);
 3. low coverage: a sensor left with less than ``min_sensor_coverage`` valid readings is dropped
    for the whole run, so models never see a sensor that is mostly holes.
 
@@ -25,6 +26,7 @@ import pandas as pd
 class CleaningConfig:
     frozen_min_seconds: float = 600
     frozen_kinds: tuple[str, ...] = ("pressure", "temperature")
+    frozen_sources: tuple[str, ...] = ("WELL",)
     min_sensor_coverage: float = 0.5
     min_valid_sensors: int = 3
     resample_seconds: int = 10
@@ -32,8 +34,9 @@ class CleaningConfig:
     @classmethod
     def from_dict(cls, d: dict) -> CleaningConfig:
         d = dict(d)
-        if "frozen_kinds" in d:
-            d["frozen_kinds"] = tuple(d["frozen_kinds"])
+        for key in ("frozen_kinds", "frozen_sources"):
+            if key in d:
+                d[key] = tuple(d[key])
         return cls(**d)
 
 
@@ -55,7 +58,8 @@ def frozen_mask(values: pd.Series, ts: pd.Series, min_seconds: float) -> pd.Seri
     return pd.Series(((last - first) >= min_seconds) & ~np.isnan(v), index=values.index)
 
 
-def clean_instance(raw: pd.DataFrame, sensors: dict[str, dict], cfg: CleaningConfig) -> tuple[pd.DataFrame, list[dict]]:
+def clean_instance(raw: pd.DataFrame, sensors: dict[str, dict], cfg: CleaningConfig,
+                   source: str = "WELL") -> tuple[pd.DataFrame, list[dict]]:
     """Apply the three masks to one run. Returns the cleaned frame and per-sensor quality rows."""
     df = raw.copy()
     n = len(df)
@@ -69,7 +73,7 @@ def clean_instance(raw: pd.DataFrame, sensors: dict[str, dict], cfg: CleaningCon
         s = s.mask(oor)
 
         frozen = pd.Series(False, index=s.index)
-        if spec["kind"] in cfg.frozen_kinds:
+        if spec["kind"] in cfg.frozen_kinds and source in cfg.frozen_sources:
             frozen = frozen_mask(s, df["ts"], cfg.frozen_min_seconds)
             s = s.mask(frozen)
 
