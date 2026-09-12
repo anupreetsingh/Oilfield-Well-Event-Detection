@@ -96,6 +96,20 @@ def model_label_expr(raw):
     return F.when(raw.isNotNull(), event)
 
 
+def run_timing(readings):
+    """Per-run extent and event timing: first faulty bucket, first transient, steady-state onset."""
+    raw, ts = F.col("raw_class"), F.col("ts")
+    return readings.groupBy("instance_id").agg(
+        F.min(ts).alias("start_ts"),
+        F.max(ts).alias("end_ts"),
+        F.count("*").alias("n_buckets"),
+        F.count(raw).alias("n_labelled"),
+        F.min(F.when(raw > 0, ts)).alias("event_start"),
+        F.min(F.when(raw >= TRANSIENT_OFFSET, ts)).alias("transient_start"),
+        F.min(F.when((raw > 0) & (raw < TRANSIENT_OFFSET), ts)).alias("steady_onset"),
+    )
+
+
 def build_silver(spark, store: TableStore, cfg: dict, event_types: list[int] | None = None) -> None:
     sensors = cfg["sensors"]
     columns = sensor_columns(cfg)
@@ -122,15 +136,7 @@ def build_silver(spark, store: TableStore, cfg: dict, event_types: list[int] | N
         readings = processed.where("kind = 'reading'").select("instance_id", "ts", *columns, "raw_class", "n_obs")
 
         raw = F.col("raw_class")
-        per_run = readings.groupBy("instance_id").agg(
-            F.min("ts").alias("start_ts"),
-            F.max("ts").alias("end_ts"),
-            F.count("*").alias("n_buckets"),
-            F.count(raw).alias("n_labelled"),
-            F.min(F.when(raw > 0, "ts")).alias("event_start"),
-            F.min(F.when(raw >= TRANSIENT_OFFSET, "ts")).alias("transient_start"),
-            F.min(F.when((raw > 0) & (raw < TRANSIENT_OFFSET), "ts")).alias("steady_onset"),
-        )
+        per_run = run_timing(readings)
         sensors_kept = quality.groupBy("instance_id").agg(F.sum(F.col("kept").cast("int")).alias("n_valid_sensors"))
         min_sensors = cleaning.min_valid_sensors
         instances = (
