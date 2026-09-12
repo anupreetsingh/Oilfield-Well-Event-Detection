@@ -1,0 +1,30 @@
+# Well-event classifiers trained on gold_3w_windows (see configs/threew.yaml for the tables).
+pipeline_config: configs/threew.yaml
+experiment: oilfield-well-events     # pass a workspace path such as /Shared/oilfield/well-events on Databricks
+reports_dir: reports
+predictions_path: data/events/oof_predictions.parquet
+
+cv:
+  n_folds: 5          # folds over real wells; simulated and hand-drawn runs are always training data
+  seed: 7
+train_stride: 3       # keep every 3rd training window; neighbouring windows overlap by 90% anyway
+
+models:
+  rf:                 # baseline: random forest on per-window level statistics only
+    features: level
+    n_estimators: 200
+    min_samples_leaf: 10
+    max_features: sqrt
+    max_samples: 0.3
+  hgb:                # gradient boosting on level + shape + drift features
+    features: all
+    learning_rate: 0.08
+    max_iter: 300
+    max_leaf_nodes: 63
+    min_samples_leaf: 40
+    l2_regularization: 1.0
+
+alerts:
+  threshold: 0.6      # class probability needed for a window to vote for a fault
+  k: 3                # ... in k of the last n windows (one window per minute)
+  n: 5
