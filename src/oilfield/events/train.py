@@ -2,7 +2,7 @@
 
 Flow:
 
-    gold_3w_windows
+    gold_3w_windows (+ silver_3w_readings sequences for the CNN)
       -> folds over real wells; simulated runs always train
       -> per model and fold: fit on the training wells, predict the held-out wells' windows
       -> pooled out-of-fold macro-F1, per-class F1, confusion matrix   (window level)
@@ -10,7 +10,7 @@ Flow:
          steady state, false alerts per day of normal operation        (run level)
       -> MLflow: one parent run, one nested run per model; reports/event_metrics.{json,md}
 
-Run locally:  python -m oilfield.events.train --models rf hgb
+Run locally:  python -m oilfield.events.train --models rf hgb cnn ensemble
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from sklearn.metrics import f1_score
 
 from oilfield.config import REPO_ROOT, load_config, parse_overrides, resolve_path
 from oilfield.events.alerts import AlertRule, score_alerts, summarize_alerts
-from oilfield.events.data import feature_columns, load_instances, load_windows
+from oilfield.events.data import SequenceStore, feature_columns, load_instances, load_windows
 from oilfield.events.metrics import classification_summary, confusion_frame, full_proba
 from oilfield.events.models import SKLEARN_MODELS
 from oilfield.events.splits import stride_mask, well_folds
@@ -41,7 +41,7 @@ log = logging.getLogger(__name__)
 
 
 class Experiment:
-    """Everything the models share: windows, folds and labels."""
+    """Everything the models share: windows, folds, labels, and (lazily) CNN sequences."""
 
     def __init__(self, cfg: dict, spark=None):
         self.cfg = cfg
@@ -59,6 +59,14 @@ class Experiment:
         self.train_keep = stride_mask(self.windows, cfg.get("train_stride", 1))
         self.eval_mask = self.fold >= 0
         self.n_folds = cfg["cv"]["n_folds"]
+        self._seqs = None
+
+    @property
+    def sequences(self) -> SequenceStore:
+        if self._seqs is None:
+            self._seqs = SequenceStore.from_store(self.store, self.sensors, self.pipe_cfg["cleaning"]["resample_seconds"])
+            self.starts = self._seqs.window_starts(self.windows, self.pipe_cfg["windows"]["length_seconds"])
+        return self._seqs
 
     def data_summary(self) -> dict:
         real = self.windows[self.eval_mask]
@@ -85,6 +93,26 @@ class Experiment:
             model.fit(X[tr], self.y[tr])
             proba[te] = full_proba(model, X[te])
             self._log_fold(name, k, proba, te, time.time() - started)
+        return proba
+
+    def oof_cnn(self, params: dict) -> np.ndarray:
+        from oilfield.events.cnn import pick_device, predict_cnn, sensor_scale, train_cnn
+
+        seqs, device = self.sequences, pick_device()
+        length = self.pipe_cfg["windows"]["length_seconds"] // self.pipe_cfg["cleaning"]["resample_seconds"]
+        std_cols = [f"{c}_std" for c in self.sensors]
+        proba = np.full((len(self.windows), N_CLASSES), np.nan, dtype=np.float32)
+        for k in range(self.n_folds):
+            tr, te = self.train_keep & (self.fold != k), self.fold == k
+            started = time.time()
+            scale = sensor_scale(self.windows.loc[tr, std_cols].to_numpy(dtype=np.float32))
+            model = train_cnn(
+                seqs.values, self.starts[tr], self.y[tr], length=length, scale=scale, n_classes=N_CLASSES,
+                params=params, seed=self.cfg["cv"]["seed"] + k, device=device,
+                on_epoch=lambda epoch, loss, k=k: mlflow.log_metric(f"fold{k}_train_loss", loss, step=epoch),
+            )
+            proba[te] = predict_cnn(model, seqs.values, self.starts[te], length=length, scale=scale, device=device)
+            self._log_fold("cnn", k, proba, te, time.time() - started)
         return proba
 
     def _log_fold(self, name: str, k: int, proba: np.ndarray, te: np.ndarray, seconds: float) -> None:
@@ -160,6 +188,12 @@ def run(cfg: dict, models: list[str], spark=None) -> dict:
                 mlflow.log_params({k: v for k, v in params.items() if not isinstance(v, list)})
                 if name in SKLEARN_MODELS:
                     oof[name] = exp.oof_sklearn(name, params)
+                elif name == "cnn":
+                    oof[name] = exp.oof_cnn(params)
+                elif name == "ensemble":
+                    members = [m for m in params["members"] if m in oof]
+                    mlflow.log_param("members", ",".join(members))
+                    oof[name] = np.mean([oof[m] for m in members], axis=0)
                 else:
                     raise ValueError(f"unknown model {name!r}")
 
@@ -192,7 +226,7 @@ def save_predictions(exp: Experiment, oof: dict[str, np.ndarray], path: Path) ->
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--config", default="configs/events.yaml")
-    parser.add_argument("--models", nargs="+", default=["rf", "hgb"])
+    parser.add_argument("--models", nargs="+", default=["rf", "hgb", "cnn", "ensemble"])
     parser.add_argument("--set", nargs="*", default=[], help="config overrides, e.g. cv.n_folds=3")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")

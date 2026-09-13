@@ -23,6 +23,15 @@ models:
     max_leaf_nodes: 63
     min_samples_leaf: 40
     l2_regularization: 1.0
+  cnn:                # 1D-CNN on the 10 s sequences inside each window
+    epochs: 8
+    batch_size: 512
+    lr: 0.001
+    weight_decay: 0.0001
+    width: 64
+    dropout: 0.3
+  ensemble:
+    members: [hgb, cnn]
 
 alerts:
   threshold: 0.6      # class probability needed for a window to vote for a fault
