@@ -13,7 +13,7 @@ LEVEL_STATS = ("mean", "std", "min", "max")
 
 
 def feature_columns(sensor_columns: list[str], kind: str) -> list[str]:
-    """``level``: per-window level statistics only. ``all``: plus shape (delta, slope) and drift."""
+    """``level``: per-window level statistics only. ``all``: plus shape, drift and long context."""
     stats = LEVEL_STATS if kind == "level" else FEATURE_STATS
     return [f"{c}_{s}" for c in sensor_columns for s in stats]
 

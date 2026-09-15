@@ -9,6 +9,10 @@ Windows are built in two passes so no row is ever duplicated:
    window functions, giving exact means, standard deviations, slopes and drift from the
    trailing baseline, one row per (run, window end).
 
+Each window also gets long-context features over the hour that ends with it (``l*``) and drift
+against a 3-hour trailing baseline: slugging cycles and choke scaling unfold over tens of
+minutes to hours, far longer than one 10-minute window.
+
 A window is labelled with the well's state at its end, which is the moment an online detector
 would raise an alert.
 """
@@ -18,7 +22,7 @@ from __future__ import annotations
 from pyspark.sql import DataFrame, Window
 from pyspark.sql import functions as F
 
-FEATURE_STATS = ("mean", "std", "min", "max", "delta", "slope", "dev")
+FEATURE_STATS = ("mean", "std", "min", "max", "delta", "slope", "dev", "lstd", "lslope", "lrange", "ldev")
 
 
 def feature_names(sensor_columns: list[str], stats=FEATURE_STATS) -> list[str]:
@@ -55,6 +59,24 @@ def bucket_stats(readings: DataFrame, instances: DataFrame, sensor_columns: list
     return df.groupBy("instance_id", bucket).agg(*aggs)
 
 
+def _frame_stats(c: str, frame) -> dict:
+    n = F.sum(f"{c}__n").over(frame)
+    s1, s2 = F.sum(f"{c}__s1").over(frame), F.sum(f"{c}__s2").over(frame)
+    st, stt, stx = F.sum(f"{c}__st").over(frame), F.sum(f"{c}__stt").over(frame), F.sum(f"{c}__stx").over(frame)
+    mean = s1 / n
+    slope_den = n * stt - st * st
+    return {
+        "n": n,
+        "mean": mean,
+        "std": F.sqrt(F.greatest((s2 - n * mean * mean) / (n - 1), F.lit(0.0))),
+        "min": F.min(f"{c}__min").over(frame),
+        "max": F.max(f"{c}__max").over(frame),
+        "first": F.first(f"{c}__first", ignorenulls=True).over(frame),
+        "last": F.last(f"{c}__last", ignorenulls=True).over(frame),
+        "slope": F.when(slope_den > 0, (n * stx - st * s1) / slope_den * 60.0),  # per minute
+    }
+
+
 def window_features(
     buckets: DataFrame,
     instances: DataFrame,
@@ -66,40 +88,41 @@ def window_features(
     resample_seconds: int,
     min_coverage: float,
     min_valid_sensors: int,
+    long_seconds: int = 3600,
+    long_baseline_seconds: int = 10800,
 ) -> DataFrame:
-    if length_seconds % step_seconds:
-        raise ValueError("window length must be a multiple of the step")
+    if length_seconds % step_seconds or long_seconds % step_seconds:
+        raise ValueError("window lengths must be multiples of the step")
     span = length_seconds - step_seconds
     order = Window.partitionBy("instance_id").orderBy("bucket")
     win = order.rangeBetween(-span, 0)
+    longwin = order.rangeBetween(-(long_seconds - step_seconds), 0)
     base = order.rangeBetween(-span - baseline_seconds, -length_seconds)
-    expected = length_seconds / resample_seconds
+    longbase = order.rangeBetween(-span - long_baseline_seconds, -length_seconds)
 
-    cols = []
-    coverage_ok = []
+    def base_mean(c, frame):
+        return F.sum(f"{c}__s1").over(frame) / F.sum(f"{c}__n").over(frame)
+
+    cols, coverage_ok = [], []
     for c in sensor_columns:
-        n = F.sum(f"{c}__n").over(win)
-        s1, s2 = F.sum(f"{c}__s1").over(win), F.sum(f"{c}__s2").over(win)
-        st, stt, stx = F.sum(f"{c}__st").over(win), F.sum(f"{c}__stt").over(win), F.sum(f"{c}__stx").over(win)
-        mean = s1 / n
-        var = (s2 - n * mean * mean) / (n - 1)
-        slope_den = n * stt - st * st
-        first = F.first(f"{c}__first", ignorenulls=True).over(win)
-        last = F.last(f"{c}__last", ignorenulls=True).over(win)
-        base_mean = F.sum(f"{c}__s1").over(base) / F.sum(f"{c}__n").over(base)
-
-        ok = (n / F.lit(expected)) >= min_coverage
+        short, long = _frame_stats(c, win), _frame_stats(c, longwin)
+        ok = (short["n"] / F.lit(length_seconds / resample_seconds)) >= min_coverage
+        long_ok = ok & ((long["n"] / F.lit(long_seconds / resample_seconds)) >= min_coverage)
         coverage_ok.append(F.when(ok, 1).otherwise(0))
         stats = {
-            "mean": mean,
-            "std": F.sqrt(F.greatest(var, F.lit(0.0))),
-            "min": F.min(f"{c}__min").over(win),
-            "max": F.max(f"{c}__max").over(win),
-            "delta": last - first,
-            "slope": F.when(slope_den > 0, (n * stx - st * s1) / slope_den * 60.0),  # per minute
-            "dev": mean - base_mean,
+            "mean": (ok, short["mean"]),
+            "std": (ok, short["std"]),
+            "min": (ok, short["min"]),
+            "max": (ok, short["max"]),
+            "delta": (ok, short["last"] - short["first"]),
+            "slope": (ok, short["slope"]),
+            "dev": (ok, short["mean"] - base_mean(c, base)),
+            "lstd": (long_ok, long["std"]),
+            "lslope": (long_ok, long["slope"]),
+            "lrange": (long_ok, long["max"] - long["min"]),
+            "ldev": (ok, short["mean"] - base_mean(c, longbase)),
         }
-        cols += [F.when(ok, expr).cast("float").alias(f"{c}_{name}") for name, expr in stats.items()]
+        cols += [F.when(valid, expr).cast("float").alias(f"{c}_{name}") for name, (valid, expr) in stats.items()]
 
     meta = instances.select("instance_id", "well_id", "source", "event_type", F.col("start_ts").cast("long").alias("t0"))
     windows = buckets.select(

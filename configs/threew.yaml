@@ -34,6 +34,8 @@ windows:
   length_seconds: 600
   step_seconds: 60
   baseline_seconds: 1800     # trailing context before each window, used for drift features
+  long_seconds: 3600         # long-context window ending with each window (slugging cycles, scaling trends)
+  long_baseline_seconds: 10800
   min_coverage: 0.5          # per-sensor share of valid 10 s buckets for a window feature to count
   min_valid_sensors: 2
 

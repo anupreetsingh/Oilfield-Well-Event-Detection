@@ -82,3 +82,20 @@ def test_sparse_sensor_features_are_null(gold):
     assert np.isnan(last.t_tpt_mean) and not np.isnan(last.p_tpt_mean)
     first = gold.iloc[0]
     assert np.isnan(first.p_tpt_dev)  # no baseline history before the first window
+
+
+def test_long_context_features(spark, run_frames):
+    from oilfield.threew import windowing
+
+    readings, instances = run_frames
+    r, i = spark.createDataFrame(readings), spark.createDataFrame(instances)
+    buckets = windowing.bucket_stats(r, i, ["p_tpt"], STEP)
+    out = windowing.window_features(
+        buckets, i, ["p_tpt"], length_seconds=LENGTH, step_seconds=STEP, baseline_seconds=BASELINE,
+        resample_seconds=RES, min_coverage=0.5, min_valid_sensors=1, long_seconds=1200, long_baseline_seconds=600,
+    ).toPandas().set_index("window_end")
+    row = out.loc[pd.Timestamp("2017-05-01 00:30:00")]
+    assert row.p_tpt_lslope == pytest.approx(0.6, rel=1e-4)
+    assert row.p_tpt_lrange == pytest.approx(0.01 * (1790 - 600), rel=1e-5)  # ramp over the last 20 minutes
+    # 10 minutes in, the 20-minute context is only half there: still valid at min_coverage 0.5
+    assert not np.isnan(out.loc[pd.Timestamp("2017-05-01 00:10:00")].p_tpt_lstd)

@@ -185,6 +185,8 @@ def build_gold(spark, store: TableStore, cfg: dict) -> None:
         resample_seconds=cfg["cleaning"]["resample_seconds"],
         min_coverage=w["min_coverage"],
         min_valid_sensors=w["min_valid_sensors"],
+        long_seconds=w.get("long_seconds", 3600),
+        long_baseline_seconds=w.get("long_baseline_seconds", 10800),
     )
     store.write(gold, "gold_3w_windows", mode="overwrite")
 
