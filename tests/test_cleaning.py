@@ -44,6 +44,11 @@ def test_frozen_mask_only_flags_long_runs():
     assert not mask.iloc[40:].any()
 
 
+def test_frozen_mask_ignores_timestamp_resolution():
+    ts = pd.Series(pd.date_range("2017-01-01", periods=40, freq="1s")).astype("datetime64[us]")
+    assert frozen_mask(pd.Series(np.full(40, 7.0)), ts, min_seconds=30).all()
+
+
 def test_clean_instance_masks_and_drops_sparse_sensors():
     run = make_run()
     run.loc[:99, "p_tpt"] = -9_999_000 / 1e5      # historian sentinel

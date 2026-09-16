@@ -52,7 +52,7 @@ def frozen_mask(values: pd.Series, ts: pd.Series, min_seconds: float) -> pd.Seri
     # NaN != NaN, so gaps always start a new run and never count as frozen.
     starts = np.r_[True, v[1:] != v[:-1]]
     run_id = np.cumsum(starts)
-    t = ts.astype("int64").to_numpy() / 1e9
+    t = (ts - ts.iloc[0]).dt.total_seconds().to_numpy()
     first = pd.Series(t).groupby(run_id).transform("min").to_numpy()
     last = pd.Series(t).groupby(run_id).transform("max").to_numpy()
     return pd.Series(((last - first) >= min_seconds) & ~np.isnan(v), index=values.index)

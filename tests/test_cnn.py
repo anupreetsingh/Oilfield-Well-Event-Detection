@@ -41,3 +41,18 @@ def test_forward_and_short_training_separates_toy_classes():
     proba = predict_cnn(model, values, starts, length=60, scale=scale)
     assert proba.shape == (len(y), 3)
     assert (proba.argmax(1) == y).mean() > 0.9
+
+
+def test_window_starts_index_the_grid_for_any_timestamp_resolution():
+    import pandas as pd
+
+    from oilfield.events.data import SequenceStore
+
+    store = SequenceStore(np.zeros((200, 2), np.float32), offsets={"a": 0, "b": 100},
+                          starts={"a": 1_500_000_000, "b": 1_500_100_000}, resample_seconds=10)
+    for unit in ("ns", "us"):
+        windows = pd.DataFrame({
+            "instance_id": ["a", "b"],
+            "window_end": pd.to_datetime([1_500_000_000 + 600, 1_500_100_000 + 900], unit="s").astype(f"datetime64[{unit}]"),
+        })
+        assert store.window_starts(windows, 600).tolist() == [0, 130]

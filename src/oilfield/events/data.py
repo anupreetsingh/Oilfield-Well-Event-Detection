@@ -18,6 +18,11 @@ def feature_columns(sensor_columns: list[str], kind: str) -> list[str]:
     return [f"{c}_{s}" for c in sensor_columns for s in stats]
 
 
+def epoch_seconds(ts: pd.Series) -> np.ndarray:
+    """Whole seconds since the epoch, whatever datetime resolution toPandas hands back (ns or us)."""
+    return ((pd.to_datetime(ts) - pd.Timestamp(0)) // pd.Timedelta(seconds=1)).to_numpy(dtype=np.int64)
+
+
 def load_instances(store: TableStore) -> pd.DataFrame:
     return store.read("silver_3w_instances").where("kept").toPandas()
 
@@ -45,8 +50,8 @@ class SequenceStore:
     @classmethod
     def from_store(cls, store: TableStore, sensor_columns: list[str], resample_seconds: int) -> SequenceStore:
         inst = store.read("silver_3w_instances").where("kept").select("instance_id", "start_ts", "end_ts").toPandas()
-        inst["start"] = inst["start_ts"].astype("int64") // 10**9
-        inst["length"] = (inst["end_ts"].astype("int64") // 10**9 - inst["start"]) // resample_seconds + 1
+        inst["start"] = epoch_seconds(inst["start_ts"])
+        inst["length"] = (epoch_seconds(inst["end_ts"]) - inst["start"]) // resample_seconds + 1
         inst["offset"] = np.r_[0, np.cumsum(inst["length"].to_numpy())[:-1]]
         inst["run_idx"] = np.arange(len(inst))
 
@@ -70,7 +75,7 @@ class SequenceStore:
         )
 
     def window_starts(self, windows: pd.DataFrame, length_seconds: int) -> np.ndarray:
-        end = windows["window_end"].astype("int64").to_numpy() // 10**9
+        end = epoch_seconds(windows["window_end"])
         start = windows["instance_id"].map(self.starts).to_numpy()
         offset = windows["instance_id"].map(self.offsets).to_numpy()
         return (offset + (end - length_seconds - start) // self.resample).astype(np.int64)
