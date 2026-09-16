@@ -146,6 +146,10 @@ def log_summary(summary: dict) -> None:
     mlflow.log_dict(summary, "summary.json")
 
 
+def _num(x: float, fmt: str = ".1f") -> str:
+    return "-" if x is None or not np.isfinite(x) else format(x, fmt)
+
+
 def write_reports(results: dict, data_summary: dict, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     with open(out_dir / "event_metrics.json", "w") as f:
@@ -159,13 +163,21 @@ def write_reports(results: dict, data_summary: dict, out_dir: Path) -> None:
         a, folds = s["alerts"], s["fold_macro_f1"]
         lines.append(
             f"| {name} | {s['macro_f1']:.3f} | {np.mean(folds):.3f} ± {np.std(folds):.3f} | {a['detection_rate']:.2f} "
-            f"| {a['median_lead_minutes']:.1f} | {a['share_alerted_before_steady_state']:.2f} | {a['false_alerts_per_normal_day']:.2f} |"
+            f"| {_num(a['median_lead_minutes'])} | {a['share_alerted_before_steady_state']:.2f} | {a['false_alerts_per_normal_day']:.2f} |"
         )
-    per_class = ["", "| class | support | " + " | ".join(results) + " |", "|---|---|" + "---|" * len(results)]
+    per_class = ["", "Window-level F1 by class (support = held-out windows):", "",
+                 "| class | support | " + " | ".join(results) + " |", "|---|---|" + "---|" * len(results)]
     first = next(iter(results.values()))
     for cls in CLASS_NAMES:
         per_class.append(f"| {cls} | {first['support'][cls]} | " + " | ".join(f"{s['per_class_f1'][cls]:.2f}" for s in results.values()) + " |")
-    (out_dir / "event_metrics.md").write_text("\n".join(lines + per_class) + "\n")
+
+    best = max(results, key=lambda m: results[m]["macro_f1"])
+    alerts = ["", f"Alerts by fault class for `{best}` (held-out runs; lead = minutes before steady state, "
+              "delay = minutes after the labelled event start):", "",
+              "| class | runs | detected | median lead | median delay |", "|---|---|---|---|---|"]
+    for cls, a in results[best]["alerts"]["per_class"].items():
+        alerts.append(f"| {cls} | {a['runs']} | {a['detection_rate']:.2f} | {_num(a['median_lead_minutes'])} | {_num(a['median_delay_minutes'])} |")
+    (out_dir / "event_metrics.md").write_text("\n".join(lines + per_class + alerts) + "\n")
 
 
 def run(cfg: dict, models: list[str], spark=None) -> dict:

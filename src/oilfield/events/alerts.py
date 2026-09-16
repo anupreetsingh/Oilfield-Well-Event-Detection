@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from oilfield.threew.schema import EVENTS_WITH_TRANSIENT, model_label
+from oilfield.threew.schema import CLASS_NAMES, EVENTS_WITH_TRANSIENT, model_label
 
 
 @dataclass(frozen=True)
@@ -84,20 +84,36 @@ def score_alerts(windows: pd.DataFrame, proba: np.ndarray, instances: pd.DataFra
 
 
 def summarize_alerts(scored: pd.DataFrame) -> dict:
+    """Run-level alert metrics, overall and per fault class.
+
+    Transient lengths differ by orders of magnitude between events (a spurious DHSV closure
+    settles in minutes, choke scaling over many hours), so the per-class lead times are the
+    meaningful ones; the pooled median mostly reflects which classes dominate the test wells.
+    """
     faults = scored[scored["event"] > 0]
-    with_lead = faults[faults["event"].isin(_merged_transient_classes())]
-    detected = faults["alert_time"].notna()
-    lead = with_lead["lead_minutes"].dropna()
+    transient = faults["event"].isin(_merged_transient_classes())
+    lead = faults.loc[transient, "lead_minutes"].dropna()
     normal_hours = scored["normal_minutes"].sum() / 60
+
+    def _median(s: pd.Series) -> float:
+        s = s.dropna()
+        return float(s.median()) if len(s) else float("nan")
+
     return {
         "fault_runs": int(len(faults)),
-        "detection_rate": float(detected.mean()) if len(faults) else float("nan"),
-        "median_lead_minutes": float(lead.median()) if len(lead) else float("nan"),
-        "share_alerted_before_steady_state": float((lead > 0).sum() / max(len(with_lead), 1)),
-        "median_delay_minutes": float(faults["delay_minutes"].dropna().median()) if detected.any() else float("nan"),
+        "detection_rate": float(faults["alert_time"].notna().mean()) if len(faults) else float("nan"),
+        "median_lead_minutes": _median(lead),
+        "share_alerted_before_steady_state": float((lead > 0).sum() / max(int(transient.sum()), 1)),
+        "median_delay_minutes": _median(faults["delay_minutes"]),
         "false_alerts_per_normal_day": float(scored["false_alerts"].sum() / max(normal_hours, 1e-9) * 24),
-        "per_class_detection": {
-            int(c): float(g["alert_time"].notna().mean()) for c, g in faults.groupby("event")
+        "per_class": {
+            CLASS_NAMES[int(c)]: {
+                "runs": int(len(g)),
+                "detection_rate": float(g["alert_time"].notna().mean()),
+                "median_lead_minutes": _median(g["lead_minutes"]),
+                "median_delay_minutes": _median(g["delay_minutes"]),
+            }
+            for c, g in faults.groupby("event")
         },
     }
 
