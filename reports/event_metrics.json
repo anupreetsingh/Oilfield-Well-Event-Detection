@@ -1,0 +1,401 @@
+{
+  "data": {
+    "runs_kept": 2114,
+    "runs_by_source": {
+      "SIMULATED": 1089,
+      "WELL": 1005,
+      "DRAWN": 20
+    },
+    "real_wells": 39,
+    "windows": 1140047,
+    "eval_windows": 420600,
+    "eval_windows_by_class": {
+      "NORMAL": 196129,
+      "ABRUPT_INCREASE_OF_BSW": 1211,
+      "SPURIOUS_CLOSURE_OF_DHSV": 1845,
+      "SEVERE_SLUGGING": 9496,
+      "FLOW_INSTABILITY": 34135,
+      "RAPID_PRODUCTIVITY_LOSS": 5558,
+      "QUICK_RESTRICTION_IN_PCK": 141,
+      "SCALING_IN_PCK": 105274,
+      "HYDRATE": 66811
+    },
+    "wells_per_fold": {
+      "0": 8,
+      "1": 8,
+      "2": 7,
+      "3": 8,
+      "4": 8
+    }
+  },
+  "models": {
+    "rf": {
+      "macro_f1": 0.21347892130011908,
+      "accuracy": 0.5275630052306229,
+      "n_windows": 420600,
+      "per_class_f1": {
+        "NORMAL": 0.648869688587289,
+        "ABRUPT_INCREASE_OF_BSW": 0.0,
+        "SPURIOUS_CLOSURE_OF_DHSV": 0.3452753623188406,
+        "SEVERE_SLUGGING": 0.0,
+        "FLOW_INSTABILITY": 0.20455218722227708,
+        "RAPID_PRODUCTIVITY_LOSS": 0.0,
+        "QUICK_RESTRICTION_IN_PCK": 0.0,
+        "SCALING_IN_PCK": 0.00015115634604726154,
+        "HYDRATE": 0.7224618972266178
+      },
+      "support": {
+        "NORMAL": 196129,
+        "ABRUPT_INCREASE_OF_BSW": 1211,
+        "SPURIOUS_CLOSURE_OF_DHSV": 1845,
+        "SEVERE_SLUGGING": 9496,
+        "FLOW_INSTABILITY": 34135,
+        "RAPID_PRODUCTIVITY_LOSS": 5558,
+        "QUICK_RESTRICTION_IN_PCK": 141,
+        "SCALING_IN_PCK": 105274,
+        "HYDRATE": 66811
+      },
+      "fold_macro_f1": [
+        0.2309907953422941,
+        0.27698734271307923,
+        0.34676819247787044,
+        0.27941542812592546,
+        0.19659691730020437
+      ],
+      "alerts": {
+        "fault_runs": 483,
+        "detection_rate": 0.13043478260869565,
+        "median_lead_minutes": 1076.0833333333335,
+        "share_alerted_before_steady_state": 0.12162162162162163,
+        "median_delay_minutes": 3.0,
+        "false_alerts_per_normal_day": 0.5359737723641074,
+        "per_class": {
+          "ABRUPT_INCREASE_OF_BSW": {
+            "runs": 4,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "SPURIOUS_CLOSURE_OF_DHSV": {
+            "runs": 22,
+            "detection_rate": 0.7727272727272727,
+            "median_lead_minutes": 99.5,
+            "median_delay_minutes": 25.5
+          },
+          "SEVERE_SLUGGING": {
+            "runs": 32,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "FLOW_INSTABILITY": {
+            "runs": 303,
+            "detection_rate": 0.11551155115511551,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": 3.0
+          },
+          "RAPID_PRODUCTIVITY_LOSS": {
+            "runs": 11,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "QUICK_RESTRICTION_IN_PCK": {
+            "runs": 5,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "SCALING_IN_PCK": {
+            "runs": 35,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "HYDRATE": {
+            "runs": 71,
+            "detection_rate": 0.15492957746478872,
+            "median_lead_minutes": 2922.4166666666665,
+            "median_delay_minutes": 15.666666666666666
+          }
+        }
+      }
+    },
+    "hgb": {
+      "macro_f1": 0.2794856590958199,
+      "accuracy": 0.6062601046124584,
+      "n_windows": 420600,
+      "per_class_f1": {
+        "NORMAL": 0.6843564389707056,
+        "ABRUPT_INCREASE_OF_BSW": 0.0,
+        "SPURIOUS_CLOSURE_OF_DHSV": 0.2814654814322506,
+        "SEVERE_SLUGGING": 0.0,
+        "FLOW_INSTABILITY": 0.39290229946638666,
+        "RAPID_PRODUCTIVITY_LOSS": 0.0,
+        "QUICK_RESTRICTION_IN_PCK": 0.0,
+        "SCALING_IN_PCK": 0.3683572833748062,
+        "HYDRATE": 0.78828942861823
+      },
+      "support": {
+        "NORMAL": 196129,
+        "ABRUPT_INCREASE_OF_BSW": 1211,
+        "SPURIOUS_CLOSURE_OF_DHSV": 1845,
+        "SEVERE_SLUGGING": 9496,
+        "FLOW_INSTABILITY": 34135,
+        "RAPID_PRODUCTIVITY_LOSS": 5558,
+        "QUICK_RESTRICTION_IN_PCK": 141,
+        "SCALING_IN_PCK": 105274,
+        "HYDRATE": 66811
+      },
+      "fold_macro_f1": [
+        0.22007455729981704,
+        0.3640205341939573,
+        0.363692027185607,
+        0.5233480855390044,
+        0.3115831213150224
+      ],
+      "alerts": {
+        "fault_runs": 483,
+        "detection_rate": 0.2898550724637681,
+        "median_lead_minutes": 216.0,
+        "share_alerted_before_steady_state": 0.16216216216216217,
+        "median_delay_minutes": 3.0,
+        "false_alerts_per_normal_day": 10.712133340811405,
+        "per_class": {
+          "ABRUPT_INCREASE_OF_BSW": {
+            "runs": 4,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "SPURIOUS_CLOSURE_OF_DHSV": {
+            "runs": 22,
+            "detection_rate": 0.9545454545454546,
+            "median_lead_minutes": 86.25,
+            "median_delay_minutes": 5.166666666666667
+          },
+          "SEVERE_SLUGGING": {
+            "runs": 32,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "FLOW_INSTABILITY": {
+            "runs": 303,
+            "detection_rate": 0.264026402640264,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": 3.0
+          },
+          "RAPID_PRODUCTIVITY_LOSS": {
+            "runs": 11,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "QUICK_RESTRICTION_IN_PCK": {
+            "runs": 5,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "SCALING_IN_PCK": {
+            "runs": 35,
+            "detection_rate": 0.4,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": 62.333333333333336
+          },
+          "HYDRATE": {
+            "runs": 71,
+            "detection_rate": 0.352112676056338,
+            "median_lead_minutes": 1964.6666666666667,
+            "median_delay_minutes": 4.833333333333333
+          }
+        }
+      }
+    },
+    "cnn": {
+      "macro_f1": 0.14256171923394337,
+      "accuracy": 0.3573656680932002,
+      "n_windows": 420600,
+      "per_class_f1": {
+        "NORMAL": 0.5307305183613652,
+        "ABRUPT_INCREASE_OF_BSW": 0.0,
+        "SPURIOUS_CLOSURE_OF_DHSV": 0.06855380982057926,
+        "SEVERE_SLUGGING": 0.029696457099896625,
+        "FLOW_INSTABILITY": 0.25097719567996146,
+        "RAPID_PRODUCTIVITY_LOSS": 0.0010147705491036193,
+        "QUICK_RESTRICTION_IN_PCK": 0.0,
+        "SCALING_IN_PCK": 0.005497000923997306,
+        "HYDRATE": 0.3965857206705869
+      },
+      "support": {
+        "NORMAL": 196129,
+        "ABRUPT_INCREASE_OF_BSW": 1211,
+        "SPURIOUS_CLOSURE_OF_DHSV": 1845,
+        "SEVERE_SLUGGING": 9496,
+        "FLOW_INSTABILITY": 34135,
+        "RAPID_PRODUCTIVITY_LOSS": 5558,
+        "QUICK_RESTRICTION_IN_PCK": 141,
+        "SCALING_IN_PCK": 105274,
+        "HYDRATE": 66811
+      },
+      "fold_macro_f1": [
+        0.14560483045419437,
+        0.22861517922631952,
+        0.2614260863577617,
+        0.2557961075407152,
+        0.24249798652550406
+      ],
+      "alerts": {
+        "fault_runs": 483,
+        "detection_rate": 0.2567287784679089,
+        "median_lead_minutes": 232.66666666666669,
+        "share_alerted_before_steady_state": 0.1891891891891892,
+        "median_delay_minutes": 4.75,
+        "false_alerts_per_normal_day": 27.349346603510952,
+        "per_class": {
+          "ABRUPT_INCREASE_OF_BSW": {
+            "runs": 4,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "SPURIOUS_CLOSURE_OF_DHSV": {
+            "runs": 22,
+            "detection_rate": 0.9545454545454546,
+            "median_lead_minutes": 86.25,
+            "median_delay_minutes": 5.5
+          },
+          "SEVERE_SLUGGING": {
+            "runs": 32,
+            "detection_rate": 0.15625,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": 68.0
+          },
+          "FLOW_INSTABILITY": {
+            "runs": 303,
+            "detection_rate": 0.24092409240924093,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": 3.0
+          },
+          "RAPID_PRODUCTIVITY_LOSS": {
+            "runs": 11,
+            "detection_rate": 0.09090909090909091,
+            "median_lead_minutes": 33.833333333333336,
+            "median_delay_minutes": 708.0
+          },
+          "QUICK_RESTRICTION_IN_PCK": {
+            "runs": 5,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "SCALING_IN_PCK": {
+            "runs": 35,
+            "detection_rate": 0.05714285714285714,
+            "median_lead_minutes": 489.5,
+            "median_delay_minutes": 27.333333333333332
+          },
+          "HYDRATE": {
+            "runs": 71,
+            "detection_rate": 0.30985915492957744,
+            "median_lead_minutes": 1935.5,
+            "median_delay_minutes": 5.083333333333334
+          }
+        }
+      }
+    },
+    "ensemble": {
+      "macro_f1": 0.21796553003705554,
+      "accuracy": 0.5121017593913457,
+      "n_windows": 420600,
+      "per_class_f1": {
+        "NORMAL": 0.6419974815556238,
+        "ABRUPT_INCREASE_OF_BSW": 0.0,
+        "SPURIOUS_CLOSURE_OF_DHSV": 0.16497037824699984,
+        "SEVERE_SLUGGING": 0.0,
+        "FLOW_INSTABILITY": 0.36503584556956886,
+        "RAPID_PRODUCTIVITY_LOSS": 0.0005576985639261979,
+        "QUICK_RESTRICTION_IN_PCK": 0.0,
+        "SCALING_IN_PCK": 0.2534676700878597,
+        "HYDRATE": 0.5356606963095215
+      },
+      "support": {
+        "NORMAL": 196129,
+        "ABRUPT_INCREASE_OF_BSW": 1211,
+        "SPURIOUS_CLOSURE_OF_DHSV": 1845,
+        "SEVERE_SLUGGING": 9496,
+        "FLOW_INSTABILITY": 34135,
+        "RAPID_PRODUCTIVITY_LOSS": 5558,
+        "QUICK_RESTRICTION_IN_PCK": 141,
+        "SCALING_IN_PCK": 105274,
+        "HYDRATE": 66811
+      },
+      "fold_macro_f1": [
+        0.19070522346579294,
+        0.2590421825749152,
+        0.34068953123583184,
+        0.47029363586182427,
+        0.3239933464551706
+      ],
+      "alerts": {
+        "fault_runs": 483,
+        "detection_rate": 0.2463768115942029,
+        "median_lead_minutes": 182.16666666666666,
+        "share_alerted_before_steady_state": 0.16216216216216217,
+        "median_delay_minutes": 3.6666666666666665,
+        "false_alerts_per_normal_day": 9.625501583141709,
+        "per_class": {
+          "ABRUPT_INCREASE_OF_BSW": {
+            "runs": 4,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "SPURIOUS_CLOSURE_OF_DHSV": {
+            "runs": 22,
+            "detection_rate": 0.9545454545454546,
+            "median_lead_minutes": 86.25,
+            "median_delay_minutes": 5.5
+          },
+          "SEVERE_SLUGGING": {
+            "runs": 32,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "FLOW_INSTABILITY": {
+            "runs": 303,
+            "detection_rate": 0.24422442244224424,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": 3.0
+          },
+          "RAPID_PRODUCTIVITY_LOSS": {
+            "runs": 11,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "QUICK_RESTRICTION_IN_PCK": {
+            "runs": 5,
+            "detection_rate": 0.0,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": NaN
+          },
+          "SCALING_IN_PCK": {
+            "runs": 35,
+            "detection_rate": 0.08571428571428572,
+            "median_lead_minutes": NaN,
+            "median_delay_minutes": 1492.0
+          },
+          "HYDRATE": {
+            "runs": 71,
+            "detection_rate": 0.29577464788732394,
+            "median_lead_minutes": 1926.5,
+            "median_delay_minutes": 10.833333333333334
+          }
+        }
+      }
+    }
+  }
+}
