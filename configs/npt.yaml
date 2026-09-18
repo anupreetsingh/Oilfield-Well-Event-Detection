@@ -1,0 +1,30 @@
+# NPT cause tagging on Equinor Volve daily drilling reports.
+# Point raw_dir at the "Daily Drilling Report - XML Version" folder from the Volve data village,
+# or at data/raw/volve_synthetic (python -m oilfield.npt.synthetic) for an offline run.
+raw_dir: data/raw/volve/ddr
+out_dir: data/npt
+gold_labels: data/labels/npt_gold.csv     # hand-reviewed causes; evaluation uses them when present
+review_sample: data/labels/npt_review.csv # written by --export-review for labelling
+model_dir: models/npt-cause
+reports_dir: reports
+experiment: oilfield-npt-tagging
+
+split:            # by well, so sidetracks of one well never straddle train and test
+  test_share: 0.25
+  val_share: 0.15
+  seed: 13
+
+tfidf:
+  ngram_max: 2
+  min_df: 2
+  C: 4.0
+
+distilbert:
+  model_name: distilbert-base-uncased
+  max_length: 128
+  epochs: 4
+  batch_size: 32
+  learning_rate: 5.0e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  seed: 13
