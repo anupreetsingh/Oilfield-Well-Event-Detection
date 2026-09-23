@@ -1,0 +1,15 @@
+# NPT copilot: drafts each wellbore's daily NPT summary from the activity tables.
+npt_config: configs/npt.yaml
+# SQLite locally; on Databricks point this at the SQL warehouse instead, e.g.
+# databricks://token:<token>@<host>?http_path=<warehouse path>&catalog=main&schema=oilfield
+db_url: sqlite:///data/copilot/npt.db
+summaries_dir: data/copilot/summaries
+
+llm:
+  model: claude-opus-5-5
+  effort: medium        # routine daily drafting; raise for harder investigations
+  max_tokens: 16000
+
+tools:
+  max_rows: 200         # cap on rows any SQL tool returns to the model
+  search_k: 6           # remarks returned per search
