@@ -1,0 +1,35 @@
+// Measures for the NPT report. Create them on fact_npt (Modeling > New measure).
+// Relationships: fact_npt / fact_activity [wellbore_key] -> dim_wellbore, [date_key] -> dim_date,
+//                fact_npt [cause_key] -> dim_cause. All single-direction, many-to-one.
+
+NPT Hours = SUM ( fact_npt[hours] )
+
+Reported Hours = SUM ( fact_activity[hours] )
+
+NPT % = DIVIDE ( [NPT Hours], [Reported Hours] )
+
+NPT Events = COUNTROWS ( fact_npt )
+
+Avg Hours per Event = DIVIDE ( [NPT Hours], [NPT Events] )
+
+NPT Hours 7d =
+CALCULATE (
+    [NPT Hours],
+    DATESINPERIOD ( dim_date[date], MAX ( dim_date[date] ), -7, DAY )
+)
+
+// Hours whose cause the classifier was unsure about; worth a look before trusting the split by cause.
+Low-Confidence NPT Hours =
+CALCULATE ( [NPT Hours], fact_npt[confidence] < 0.5 )
+
+Top Cause =
+VAR ByCause =
+    ADDCOLUMNS ( VALUES ( dim_cause[cause_label] ), "@h", [NPT Hours] )
+RETURN
+    MAXX ( TOPN ( 1, ByCause, [@h], DESC ), dim_cause[cause_label] )
+
+Top Cause Share =
+DIVIDE (
+    MAXX ( VALUES ( dim_cause[cause_label] ), [NPT Hours] ),
+    [NPT Hours]
+)
