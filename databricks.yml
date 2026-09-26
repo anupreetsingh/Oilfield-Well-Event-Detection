@@ -1,0 +1,117 @@
+# Databricks Asset Bundle: `databricks bundle deploy -t dev`, then run the jobs from the workspace
+# or with `databricks bundle run well_events` / `databricks bundle run npt_copilot`.
+# Node types are AWS; swap node_type_id for your cloud (e.g. Standard_D8ds_v5 on Azure).
+bundle:
+  name: oilfield-ai
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for every Delta table
+    default: main
+  schema:
+    description: Schema inside the catalog
+    default: oilfield
+  volume_root:
+    description: UC volume holding the raw datasets and run artifacts
+    default: /Volumes/main/oilfield/files
+  experiment_root:
+    description: Workspace folder for MLflow experiments
+    default: /Shared/oilfield
+
+artifacts:
+  oilfield_wheel:
+    type: whl
+    build: python -m pip wheel --no-deps -w dist .
+    path: .
+
+resources:
+  jobs:
+    well_events:
+      name: oilfield-well-events
+      job_clusters:
+        - job_cluster_key: ml
+          new_cluster:
+            spark_version: 15.4.x-cpu-ml-scala2.12
+            node_type_id: m5d.2xlarge
+            num_workers: 4
+            spark_conf:
+              spark.sql.session.timeZone: UTC
+      parameters:
+        - {name: catalog, default: "${var.catalog}"}
+        - {name: schema, default: "${var.schema}"}
+        - {name: volume_root, default: "${var.volume_root}"}
+        - {name: experiment_root, default: "${var.experiment_root}"}
+      tasks:
+        - task_key: build_3w_tables
+          job_cluster_key: ml
+          notebook_task: {notebook_path: ./notebooks/01_build_3w_tables.py}
+          libraries: [{whl: ./dist/*.whl}]
+        - task_key: train_event_models
+          depends_on: [{task_key: build_3w_tables}]
+          job_cluster_key: ml
+          notebook_task: {notebook_path: ./notebooks/02_train_event_models.py}
+          libraries: [{whl: ./dist/*.whl}]
+
+    npt_models:
+      name: oilfield-npt-models
+      job_clusters:
+        - job_cluster_key: gpu
+          new_cluster:
+            spark_version: 15.4.x-gpu-ml-scala2.12
+            node_type_id: g5.xlarge
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+              spark.databricks.cluster.profile: singleNode
+            custom_tags: {ResourceClass: SingleNode}
+      parameters:
+        - {name: catalog, default: "${var.catalog}"}
+        - {name: schema, default: "${var.schema}"}
+        - {name: volume_root, default: "${var.volume_root}"}
+        - {name: experiment_root, default: "${var.experiment_root}"}
+      tasks:
+        - task_key: train_npt_models
+          job_cluster_key: gpu
+          notebook_task: {notebook_path: ./notebooks/03_train_npt_models.py}
+          libraries: [{whl: ./dist/*.whl}]
+
+    npt_copilot:
+      name: oilfield-npt-copilot
+      schedule:
+        quartz_cron_expression: "0 30 5 * * ?"   # 05:30 rig time, ahead of the morning call
+        timezone_id: Europe/Oslo
+        pause_status: PAUSED
+      job_clusters:
+        - job_cluster_key: small
+          new_cluster:
+            spark_version: 15.4.x-cpu-ml-scala2.12
+            node_type_id: m5d.large
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+              spark.databricks.cluster.profile: singleNode
+            custom_tags: {ResourceClass: SingleNode}
+            spark_env_vars:
+              ANTHROPIC_API_KEY: "{{secrets/oilfield/anthropic_api_key}}"
+      parameters:
+        - {name: catalog, default: "${var.catalog}"}
+        - {name: schema, default: "${var.schema}"}
+        - {name: volume_root, default: "${var.volume_root}"}
+        - {name: report_date, default: ""}       # empty = latest report date in the data
+      tasks:
+        - task_key: tag_npt
+          job_cluster_key: small
+          notebook_task: {notebook_path: ./notebooks/04_tag_npt.py}
+          libraries: [{whl: ./dist/*.whl}]
+        - task_key: daily_summaries
+          depends_on: [{task_key: tag_npt}]
+          job_cluster_key: small
+          notebook_task: {notebook_path: ./notebooks/05_npt_daily_summaries.py}
+          libraries: [{whl: ./dist/*.whl}]
+
+targets:
+  dev:
+    mode: development
+    default: true
+  prod:
+    mode: production
