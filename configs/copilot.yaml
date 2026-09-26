@@ -1,5 +1,5 @@
 # NPT copilot: drafts each wellbore's daily NPT summary from the activity tables.
-npt_config: configs/npt.yaml
+npt_dir: data/npt               # parsed activities and tagged npt_events (oilfield.npt.tag)
 # SQLite locally; on Databricks point this at the SQL warehouse instead, e.g.
 # databricks://token:<token>@<host>?http_path=<warehouse path>&catalog=main&schema=oilfield
 db_url: sqlite:///data/copilot/npt.db

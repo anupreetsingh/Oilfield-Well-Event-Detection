@@ -32,8 +32,7 @@ def _db_url(cfg: dict) -> str:
 
 
 def build(cfg: dict) -> Path:
-    npt_cfg = load_config(cfg["npt_config"])
-    out = resolve_path(npt_cfg["out_dir"])
+    out = resolve_path(cfg["npt_dir"])
     path = build_sqlite(
         pd.read_parquet(out / "activities.parquet"),
         pd.read_parquet(out / "npt_events.parquet"),
