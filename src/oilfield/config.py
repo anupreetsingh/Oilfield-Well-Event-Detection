@@ -2,18 +2,26 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+def repo_root() -> Path:
+    """The checkout (or Databricks bundle folder) that relative config paths are resolved against.
+
+    Installed as a wheel on a cluster, the package no longer sits inside the repo, so notebooks
+    set OILFIELD_ROOT to the bundle's synced files.
+    """
+    return Path(os.environ.get("OILFIELD_ROOT", Path(__file__).resolve().parents[2]))
 
 
 def load_config(path: str | Path, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     path = Path(path)
     if not path.is_absolute() and not path.exists():
-        path = REPO_ROOT / path
+        path = repo_root() / path
     with open(path) as f:
         cfg = yaml.safe_load(f) or {}
     for key, value in (overrides or {}).items():
@@ -43,5 +51,5 @@ def resolve_path(p: str | Path) -> Path:
     p = Path(p)
     if p.is_absolute() or str(p).startswith(("dbfs:", "s3:", "abfss:", "gs:")):
         return p
-    return REPO_ROOT / p
+    return repo_root() / p
 

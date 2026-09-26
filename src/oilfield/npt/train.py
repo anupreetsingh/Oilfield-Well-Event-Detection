@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report, f1_score
 
-from oilfield.config import REPO_ROOT, load_config, parse_overrides, resolve_path
+from oilfield.config import load_config, parse_overrides, repo_root, resolve_path
 from oilfield.npt.baseline import make_tfidf, tfidf_proba
 from oilfield.npt.dataset import build_examples, split_by_well
 from oilfield.npt.labeling import CAUSES, export_review_sample, load_gold
@@ -63,7 +63,7 @@ def score(y_true: np.ndarray, proba: np.ndarray) -> dict:
 
 def run(cfg: dict, models: list[str], refresh: bool = False, export_review: bool = False) -> dict:
     if not on_databricks() and not os.environ.get("MLFLOW_TRACKING_URI"):
-        mlflow.set_tracking_uri(f"sqlite:///{REPO_ROOT / 'mlflow.db'}")
+        mlflow.set_tracking_uri(f"sqlite:///{repo_root() / 'mlflow.db'}")
     mlflow.set_experiment(cfg["experiment"])
 
     activities, _ = load_activities(cfg, refresh)

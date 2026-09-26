@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score
 
-from oilfield.config import REPO_ROOT, load_config, parse_overrides, resolve_path
+from oilfield.config import load_config, parse_overrides, repo_root, resolve_path
 from oilfield.events.alerts import AlertRule, score_alerts, summarize_alerts
 from oilfield.events.data import SequenceStore, feature_columns, load_instances, load_windows
 from oilfield.events.metrics import classification_summary, confusion_frame, full_proba
@@ -45,7 +45,8 @@ class Experiment:
 
     def __init__(self, cfg: dict, spark=None):
         self.cfg = cfg
-        self.pipe_cfg = load_config(cfg["pipeline_config"])
+        # e.g. {"tables.catalog": "main", "tables.schema": "oilfield"} when running on Databricks
+        self.pipe_cfg = load_config(cfg["pipeline_config"], cfg.get("pipeline_overrides"))
         self.sensors = sensor_columns(self.pipe_cfg)
         self.spark = spark or get_spark("oilfield-events")
         self.store = TableStore.from_config(self.spark, self.pipe_cfg["tables"])
@@ -182,7 +183,7 @@ def write_reports(results: dict, data_summary: dict, out_dir: Path) -> None:
 
 def run(cfg: dict, models: list[str], spark=None) -> dict:
     if not on_databricks() and not os.environ.get("MLFLOW_TRACKING_URI"):
-        mlflow.set_tracking_uri(f"sqlite:///{REPO_ROOT / 'mlflow.db'}")
+        mlflow.set_tracking_uri(f"sqlite:///{repo_root() / 'mlflow.db'}")
     mlflow.set_experiment(cfg["experiment"])
 
     exp = Experiment(cfg, spark)
